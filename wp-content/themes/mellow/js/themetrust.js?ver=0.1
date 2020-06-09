@@ -1,0 +1,576 @@
+var themetrust = {
+
+    _init: function( settings ){
+
+        var self = this;
+		
+		jQuery(".content-area").fitVids();
+
+        this.objs = {
+            $flexslider: jQuery('.flexslider.home-slider'),
+            $gridContainer: jQuery('.grid-overlay'),
+            $window: jQuery(window)
+        };
+
+        this.config = {
+            $container: jQuery('#page'),
+            $isotopeContainer: jQuery('.thumbs'),
+            $filter: jQuery("#filter-nav a"),
+            $bricks: jQuery('.brick'),
+            windowH: self.objs.$window.height()
+        };
+
+        // Allow overriding the default config
+        jQuery.extend( themetrust.config, settings );
+
+        self.gridOverlay();
+
+        self.splash( 1.0 );
+        self.downArrow();
+        self.mobileMenu();
+        self.collapseSidebar();
+
+        if( self.config.$isotopeContainer.length > 0 )
+            self.isotopeInit();
+
+        //  self.baseliner( 34 );
+
+        if( self.objs.$flexslider.length > 0 )
+            self.flexslider( true );
+
+        jQuery(window).resize( function() {
+
+            self.splash( 1.0 );
+            self.gridOverlay();
+            //self.baseliner( 34 );
+
+        });
+
+    },
+
+    /**
+     * Adds a graphical overlay to asses whether elements are consistent with the vertical rhthym.
+     */
+    gridOverlay: function() {
+
+        var docHt           = jQuery(document).height(),
+            baseline        = this.objs.$gridContainer.attr("data-baseline"),
+            numRows         = docHt / baseline,
+            tintClass       = '';
+
+        // Set gridcontainer to document height
+        this.objs.$gridContainer.height( docHt );
+
+        for( i=0; i < numRows; i++ ){
+
+            // Tint odd rows
+            if( i % 2 == 0 )
+                tintClass = 'tint';
+            else
+                tintClass = '';
+
+            // Only add inline height if not default height (18px)
+            if( baseline != 18 )
+                tintClass = tintClass + '" style="height: ' + baseline + 'px';
+
+            this.objs.$gridContainer.append( '<div class="row ' + tintClass + '"></div>' );
+
+        }
+
+    },
+
+    /**
+     * Creates landing splash/jumbotron, whose height is based on a param
+     *
+     * @param flt pct   How tall the splash should be in % of window height. Max 1.0
+     */
+    splash: function( pct ) {
+
+        var $splash  = jQuery('.splash'),
+            $grid    = jQuery('.grid-overlay'),
+            windowHt = jQuery(window).height();
+
+        // A little validation
+        if( typeof pct != "number" || pct > 1.0 )
+            pct = 1.0;
+
+        $splash.height( windowHt * pct );
+
+        // If the grid is on the page, bump it down a bit
+        if( $grid.length > 0 )
+            $grid.css( { 'top': windowHt, 'margin-bottom': -windowHt } );
+
+
+    },
+
+    /**
+     * Creates the scroll-down arrow common to many TT splash screens
+     *
+     * @param str el      The element on which to bind the scroll. Defaults to #down-button
+     * @param str target  The scroll target. Defaults to .container
+     */
+    downArrow: function( el, target ) {
+
+        var el      = el ? el : '#down-button',
+            target  = target ? target : '.container',
+            $arrow  = jQuery(el),
+            target  = target;
+
+        $arrow.click( function(){
+            jQuery.scrollTo( target, 1000, {axis:'y'} );
+        });
+
+    },
+
+    /**
+     * Initializes Superfish on .sf-menu
+     */
+    superfish: function(){
+        jQuery('ul.sf-menu').superfish();
+    },
+
+    /**
+     * Function to make a scrolling sticky menu "stick"
+     *
+     * @todo Finish function
+     *
+     * @param int scrollPos Vertical position of the menu in px
+     * @param int menuOffset
+     */
+    stickyMenu: function( scrollPos, menuOffset ){
+
+        var $stick      = jQuery('ul.sticky'),
+            hiddenStick = $stick.height() == 0 ? true : false;
+            sticky      = scrollPos >= menuOffset ? true : false;
+
+        // Exit if no sticky div
+        if( ! $stick.length > 0 || hiddenStick )
+            return false;
+
+        if( sticky )
+            $stick.addClass( 'stuck' );
+        else
+            $stick.removeClass( 'stuck' );
+
+    },
+
+    /**
+     * Hides/Shows slide-out side menu
+     *
+     * @param str direction What direction the menu should slide, equally controlling the position. For example,
+     *   if direction === left, menu will be on the right.
+     */
+    mobileMenu: function( direction ){
+
+        var $toggle     = jQuery('a#menu-toggle'),
+            menuDiv     = $toggle.attr('data-target'),
+            $menu       = jQuery( "#" + menuDiv ),
+            direction   = direction ? direction : 'push-left';
+
+        $toggle.click( function(e){
+
+            e.preventDefault();
+
+            // Used to enable the correct helper depending on the menu type
+            if( $menu.hasClass( 'overlay' ) ) {
+
+                // This is an overlay menu
+                themetrust.overlayMenuHelper( $toggle, $menu );
+
+            } else {
+
+                // This is a slide menu
+                themetrust.slideMenuHelper( $toggle, $menu );
+
+            }
+
+        });
+
+    },
+
+    toggleMenuHelper: function( $toggle ){
+
+        var status = 'closed';
+		menu   = jQuery('#slide-menu');
+		menuW   = menu.outerWidth();
+
+        if( $toggle.hasClass( "closed" ) ) { // Open the menu
+
+            $toggle
+                .removeClass('closed')
+                .addClass('open');
+
+            jQuery('#page').click( themetrust.toggleMenuHelper );
+            jQuery('#page').unbind( 'click', themetrust.toggleMenuHelper );
+			jQuery('#menu-toggle-close').on('click', function () {
+				jQuery("#page").removeClass('push-left');
+	            menu.css('transform', 'translateX(' + menuW + 'px)');
+				$toggle
+	                .removeClass('open')
+	                .addClass('closed');
+
+	            status = 'closed';
+			});
+
+            status = 'open';
+
+        } else { // Close the menu
+
+            $toggle
+                .removeClass('open')
+                .addClass('closed');
+
+            status = 'closed';
+
+        }
+
+        return status;
+
+    },
+
+    overlayMenuHelper: function( $toggle, $menu ){
+
+        var status = this.toggleMenuHelper( $toggle);
+
+        if( 'open' === status ){
+
+            $menu.addClass('active');
+
+        } else {
+
+            $menu.removeClass('active');
+
+        }
+
+    },
+
+    slideMenuHelper: function( $toggle, $menu ){
+
+        var status  = this.toggleMenuHelper( $toggle ),
+            menuW   = $menu.outerWidth();
+
+        if( 'open' === status ){
+
+            themetrust.config.$container.addClass('push-left');
+            $menu.css('transform', 'translateX(0)');
+
+        } else {
+
+            themetrust.config.$container.removeClass('push-left');
+            $menu.css('transform', 'translateX(' + menuW + 'px)');
+
+        }
+
+    },
+
+    /**
+     * Submenus for side menus, including slide-out menu
+     *
+     * @see http://themetrust.com/demos/mellow
+     */
+    collapseSidebar: function(){
+
+        jQuery( ".collapse.sidebar" ).find( "li.menu-item-has-children" ).click( function(){
+
+            jQuery( ".collapse.sidebar li" ).not( this ).find( "ul" ).next().slideToggle( 100 );
+            jQuery( this ).find( "> ul" ).stop( true, true ).slideToggle( 100 );
+            jQuery( this ).toggleClass( "active-sub-menu" );
+
+            return false;
+
+        });
+
+        // Don't fire sub menu toggle if a user is trying to click the link
+        jQuery( ".collapse.sidebar .menu-item-has-children a" ).click( function(e) {
+            e.stopPropagation();
+
+            return true;
+        });
+    },
+
+    /**
+     * Function to ensure that odd-sized elements don't disrupt the vertical rhythm.
+     *
+     * @param baseline
+     */
+    baseliner: function( baseline ){
+
+        var $obj     = jQuery('img'),
+            baseline = baseline,
+            spacing  = 'padding';
+
+        /** First, the images, which may take user-defined dimensions */
+        themetrust.baselinerHelper( $obj, baseline, spacing );
+
+        /** Audio elements */
+        $obj    = jQuery('audio');
+        spacing = 'padding';
+        themetrust.baselinerHelper( $obj, baseline, spacing );
+
+        /** Same with video elements */
+        $obj    = jQuery('video');
+        spacing = 'margin';
+        themetrust.baselinerHelper( $obj, baseline, spacing );
+
+        /** Text areas may take arbitrary dimensions */
+        $obj    = jQuery('textarea');
+        spacing = 'margin';
+        themetrust.baselinerHelper( $obj, baseline, spacing );
+
+        /**
+         * Form elements frequently disrupt the rhythm due to outer borders, minimum readable text size within
+         * fields, etc.
+         */
+        $obj    = jQuery('form');
+        spacing = 'margin-bottom';
+        themetrust.baselinerHelper( $obj, baseline, spacing );
+
+    },
+
+    /**
+     * Baseline Helper Function
+     *
+     * First, test for the existence of $obj, then iterate through the results. Find the remainder of the division of
+     * the baseline and the image height and adds half to the top and half to the bottom margin in some cases, to the
+     * padding in others, and to the bottom margin for still others.
+     *
+     * @param obj $obj      A generic HTML5 element
+     * @param int baseline  The baseline measure passed in through baseliner
+     * @param str spacing   Where to add the extra space, e.g., margin, padding
+     */
+    baselinerHelper: function( $obj, baseline, spacing ) {
+
+        // Exit if the object doesn't exist
+        if ( ! $obj.length > 0)
+            return false;
+
+        // Exit if inside Isotope/Masonry
+        if( $obj.parents().hasClass('thumbs') )
+            return false;
+
+        $obj.each(function () {
+
+            height = jQuery(this).outerHeight();
+
+            padding = ( baseline - ( height % baseline ) );
+
+            /** If we need an extra pixel for odd remainders, add it to the bottom */
+            if (padding % 2 != 0) {
+
+                padding_bottom = ( padding / 2 ) + 1 + 'px';
+                padding = padding / 2 + 'px';
+
+            } else {
+
+                padding_bottom = padding;
+
+            }
+
+            switch (spacing) {
+
+                case "padding":
+                    jQuery(this).css({
+                        "padding-top": padding,
+                        "padding-bottom": padding_bottom
+                    });
+                    break;
+
+                case "margin":
+                    jQuery(this).css({
+                        "margin-top": padding,
+                        "margin-bottom": padding_bottom
+                    });
+                    break;
+
+                default:
+                    padding = ( baseline - ( height % baseline ) ) + 'px';
+
+                    jQuery(this).css({
+                        "margin-bottom": padding
+                    });
+                    break;
+
+            }
+
+        });
+
+    },
+
+    /**
+     * Initialize Isotope.
+     *
+     * Get the Isotope display mode via a data attribute on the parents.
+     *
+     * @param arr breakPts  An array of key=>value pairs for resolution breakpoints and the corresponding # of columns
+     */
+    isotopeInit: function() {
+
+        var $isotopeContainer = jQuery('.thumbs'),
+            mode = 'masonry',
+            columns;
+
+        columns = this.setColumns( this.config.$container );
+
+        $isotopeContainer.imagesLoaded( function() {
+
+            $isotopeContainer.isotope({
+                resizeable: false,
+                itemSelector: '.brick',
+                mode: mode,
+                masonry: {
+                    columnWidth: themetrust.config.$isotopeContainer.width() / columns
+                }
+            });
+
+        });
+
+        jQuery(window).resize( function(){
+
+            columns = themetrust.setColumns();
+
+            themetrust.config.$isotopeContainer.isotope({
+                // update columnWidth to a percentage of container width
+                masonry: {
+                    columnWidth: themetrust.config.$isotopeContainer.width() / columns
+                }
+            });
+
+        });
+
+        if( this.config.$filter.length > 0 )
+            this.filterInit();
+
+
+    },
+
+    /**
+     * Initializes the filter navigation.
+     *
+     * Note: No need to add this to the function queue, as it will be triggered by isotopeInit if #filter-nav is present.
+     */
+    filterInit: function(){
+
+        this.config.$filter.click( function(){
+
+            var selector = jQuery(this).attr( 'data-filter' );
+
+            themetrust.config.$isotopeContainer.isotope({
+                filter: selector,
+                hiddenStyle : {
+                    opacity: 0,
+                    scale : 1
+                }
+            });
+
+            if ( ! jQuery(this).hasClass( 'selected' ) ) {
+
+                jQuery(this).parents( '#filter-nav' ).find( '.selected' ).removeClass( 'selected' );
+                jQuery(this).addClass( 'selected' );
+
+            }
+
+            return false;
+        });
+
+    },
+
+    /**
+     * Set the number of columns
+     *
+     * Changes the number of columns based on screen size (viewport)
+     *
+     * To change the number of columns, change @var columns for each
+     * desired resolution.
+     */
+    setColumns: function() {
+
+        var containerW  = this.config.$isotopeContainer.width(),
+            windowW     = jQuery(window).width(),
+            columns, colW, imgOH;
+
+        // Set the number of columns
+        if( windowW <= 700 )
+            columns = 1; // 1 column for screens < 700px
+
+        else if ( windowW <= 1100 )
+            columns = 2; // 2 columns for screens < 870px
+
+        else
+            columns = 3; // 3 columns for everyone else
+
+        // Make sure the number is an integer (no fractions of a px)
+        colW = Math.floor( containerW / columns ) + 'px';
+
+        // Set the width using inline CSS
+        this.config.$bricks.each( function(){
+            jQuery(this).css( 'width', colW );
+        });
+
+        imgOH = jQuery('.brick img').outerHeight();
+
+        jQuery('span.empty-project').css('height', imgOH)
+
+        // Pass the colW variable
+        return columns;
+    },
+
+
+    /**
+     * Flexslider activation.
+     *
+     * This will always look for the .flexslider element to activate.
+     */
+    flexslider: function( fullHeight ){
+
+        var fullHeight = fullHeight ? fullHeight : false
+            sliderOH = jQuery('.flexslider').parent().outerHeight();
+
+        this.objs.$flexslider.flexslider({
+			slideshow: false,
+            animation: "slide",
+            controlNav: false,
+            pauseOnHover: true,
+            start: function( slider ){ // Ensure list items same height as parent
+                themetrust.flexsliderHelper();
+            }
+        });
+
+    },
+
+    flexsliderHelper: function(){
+
+        // Set slides to fixed height based on the tallest slide
+        jQuery('.flexslider.home-slider').each(function(){
+
+            var parentH         = jQuery(this).parent().height();
+                sliderHeight    = 0,
+                sliderInnerH    = 0;
+
+            jQuery(this).find('.slides > li').each(function(){
+                slideHeight     = jQuery(this).height();
+                sliderInnerH    = jQuery(this).find('.text').outerHeight();
+
+                if ( sliderHeight < slideHeight )
+                    sliderHeight = slideHeight;
+
+                if( sliderHeight < parentH )
+                    sliderHeight = parentH;
+
+                if( sliderHeight < sliderInnerH )
+                    sliderHeight = sliderInnerH;
+
+            });
+
+            jQuery(this).css( 'height', sliderHeight ).find('ul.slides').css( 'height', sliderHeight );
+            jQuery(this).parent().css( 'height', sliderHeight );
+
+        });
+    }
+
+};
+
+jQuery(document).ready(function() {
+
+    themetrust._init();
+
+});

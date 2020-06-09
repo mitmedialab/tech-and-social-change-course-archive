@@ -1,0 +1,48 @@
+var mellow = {
+
+    _init: function(){
+
+        var self = this;
+
+        self.objs = {
+            $masthead: jQuery('#masthead'),
+            $menuToggle: jQuery('#menu-toggle'),
+            $siteTitle: jQuery('h1.site-title'),
+            $overlayNav: jQuery('#overlay-menu nav')
+        };
+
+        self.props = {
+            toggleOffsetTop: mellow.objs.$siteTitle.length > 0 ? mellow.objs.$siteTitle.offset().top : null,
+            toggleOffsetLft: mellow.objs.$siteTitle.length > 0 ? mellow.objs.$siteTitle.offset().left + mellow.objs.$masthead.innerWidth() : null,
+            overlayMenuH: mellow.objs.$overlayNav.outerHeight()
+        };
+
+        //self.menuFixer();
+
+        self.overlayMenuCenter();
+
+    },
+
+    menuFixer: function(){
+
+        jQuery(window).scroll( function(){
+
+            mellow.objs.$menuToggle.addClass('fixed').css( 'top', mellow.props.toggleOffsetTop );
+
+        });
+
+    },
+
+    overlayMenuCenter: function(){
+
+        this.objs.$overlayNav.css( 'margin-top', - this.props.overlayMenuH / 2 );
+
+    }
+
+};
+
+jQuery(document).ready( function() {
+
+    mellow._init();
+
+});
